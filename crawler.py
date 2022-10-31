@@ -29,7 +29,7 @@ class ImageNode:
     def __init__(self, source_url, image_url,depth):
         self._url = source_url
         self._depth = depth
-        self._image_url =image_url
+        self._image_url = image_url
 
 
 def main():
@@ -48,6 +48,8 @@ def main():
     print("IMAGES: ")
     for img in images:
         write_json(img,"D:/results.json")
+
+
 
     # print(images)
     print("\nURLS: ")
@@ -74,16 +76,18 @@ def find_page_images(url):
     images = []
     html_data = get_data(url)
     soup = BeautifulSoup(html_data, 'html.parser') # Parsing the response data, using BS
-    current_image = {}
+
 
     # Getting all images on the passed link
     for item in soup.find_all('img'):
+        current_image = {}
         current_image["imageUrl"] = item['src'] # add the current img url
+        # print(item['src'])
         current_image["sourceUrl"] = url
         current_image["depth"] = "0" # TODO: update based on the node passed by
         # print(current_image)
         images.append(current_image) # TODO: append to the json file
-
+    # print(images)
     return images
 
 
