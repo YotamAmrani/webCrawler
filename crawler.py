@@ -20,8 +20,6 @@ useful Links:
 
 
 # TODO: mark them if we have visited the page
-
-
 class PageNode:
     def __init__(self, source_url,depth):
         self._url = source_url
@@ -39,9 +37,9 @@ def main():
     json_file_path = "D:/Interviews/dataloop/results.json"
     init_results_file(json_file_path)  # Init the results file
 
-    # run th scrapping process:
-    images = find_page_images("https://www.geeksforgeeks.org/")
-    urls = find_page_urls(url)
+    # run the scrapping process:
+    # images = find_page_images(url, depth)
+    # urls = find_page_urls(url)
 
     # run the main crawling function:
     crawl_page(url, depth, json_file_path)
@@ -166,12 +164,9 @@ def crawl_page(url, depth, json_file_path):
             # append it to my queue
             for url in current_page_urls:
                 if url not in my_urls_list:
-                    pages_to_crawl.append(current_page, PageNode(url, current_page._depth + 1))
+                    pages_to_crawl.append(PageNode(url, current_page._depth + 1))
+            print(pages_to_crawl)
 
-
-            print("scraping the page here")
-            print("appending the new data to our results file")
-    pass
 
 
 def verify_url_path(url):
