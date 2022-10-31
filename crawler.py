@@ -33,8 +33,16 @@ def main():
     args = sys.argv[1:]
     # TODO: add test for the input args
     print(args)
+    url = "https://www.geeksforgeeks.org/"
+    images = find_page_images("https://www.geeksforgeeks.org/")
+    urls = find_page_urls(url)
 
-    find_page_images("https://www.geeksforgeeks.org/")
+    print("IMAGES: ")
+    print(images)
+    print("\nURLS: ")
+    print(urls)
+
+# ---------- Parsing HTML functions --------------
 
 
 def get_data(url):
@@ -49,15 +57,14 @@ def get_data(url):
 
 def find_page_images(url):
     """
-    Given a url, find all images included
-    :param url:
-    :return:
+    Given a url, find all images included inside it's body
+    :param url: String - the url to scan
+    :return: a list of all images inside of it
     """
     images = []
     html_data = get_data(url)
     soup = BeautifulSoup(html_data, 'html.parser') # Parsing the response data, using BS
     current_image = {}
-    current_node_urls = []
 
     # Getting all images on the passed link
     for item in soup.find_all('img'):
@@ -67,16 +74,22 @@ def find_page_images(url):
         # print(current_image)
         images.append(current_image) # TODO: append to the json file
 
+    return images
+
+
+def find_page_urls(url):
+    """"""
+    html_data = get_data(url)
+    soup = BeautifulSoup(html_data, 'html.parser') # to be discussed, should I pass it twice?
+    current_node_urls = []
+
     # Getting all urls inside the  main url
     for link in soup.find_all('a', attrs={'href': re.compile("^https://")}):
         # display the actual urls
         # print(link.get('href'))
         current_node_urls.append(link.get('href'))
 
-    return images, current_node_urls
-
-
-
+    return current_node_urls
 
 
 
