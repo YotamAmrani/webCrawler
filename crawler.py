@@ -135,6 +135,7 @@ def write_json(new_data, filename='results.json'):
 
 # ---------- Main crawler functions --------------
 
+# TODO: to be completed
 def crawl_page(url, depth, json_file_path):
     """"""
     # init a queue for pages to crawl
@@ -166,7 +167,7 @@ def crawl_page(url, depth, json_file_path):
             for url in current_page_urls:
                 if url not in my_urls_list:
                     pages_to_crawl.append(current_page, PageNode(url, current_page._depth + 1))
-    
+
 
             print("scraping the page here")
             print("appending the new data to our results file")
