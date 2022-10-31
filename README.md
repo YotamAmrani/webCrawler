@@ -23,9 +23,12 @@ results.json - assumed to be empty, the json file to be filled with the images t
 # How to use the crawler:  
 Assuming both files are at the same directory,  
 Access the crawler directory through the CMD and Run the crawler:  
-   python "your_starting_node_url" _depth  
+   'python "your_starting_node_url" _depth'  
   
- An example run would be: python "https://www.geeksforgeeks.org/" 1  
+ An example run would be: 'python "https://www.geeksforgeeks.org/" 1'  
+   
+   in this run we will search for the images in https://www.geeksforgeeks.org/ (i.e. depth 0), and the images  
+   of it's 'neighbors' web pages (i.e. depth 1), and store them.
   
 
 
