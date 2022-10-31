@@ -1,9 +1,9 @@
+# main libraries
 import sys
 from collections import deque
 
-# importing scraping libraries
+#  scraping libraries
 import json
-# import selenium
 from bs4 import BeautifulSoup
 import requests
 import re
@@ -14,6 +14,8 @@ import re
 useful Links:
 - https://www.geeksforgeeks.org/image-scraping-with-python/
 - https://www.geeksforgeeks.org/beautifulsoup-scraping-link-from-html/
+
+- https://www.geeksforgeeks.org/append-to-json-file-using-python/
 """
 
 
@@ -23,10 +25,11 @@ useful Links:
 # TODO: open web page and extract images
 
 
-class PageNode:
-    def __init__(self, url, depth):
-        self._url = url
+class ImageNode:
+    def __init__(self, source_url, image_url,depth):
+        self._url = source_url
         self._depth = depth
+        self._image_url =image_url
 
 
 def main():
@@ -37,13 +40,20 @@ def main():
     images = find_page_images("https://www.geeksforgeeks.org/")
     urls = find_page_urls(url)
 
+    # Init the results file:
+    # init_results_file("D:/Interviews/dataloop/results.json")
+    # init_results_file("../results.json")
+    init_results_file("D:/results.json")
+
     print("IMAGES: ")
-    print(images)
+    for img in images:
+        write_json(img,"D:/results.json")
+
+    # print(images)
     print("\nURLS: ")
-    print(urls)
+    # print(urls)
 
 # ---------- Parsing HTML functions --------------
-
 
 def get_data(url):
     """
@@ -92,9 +102,45 @@ def find_page_urls(url):
     return current_node_urls
 
 
+# ---------- Appending to JSON file functions --------------
+
+def init_results_file(filename):
+    """"""
+    with open(filename, 'r+') as file:
+        # First we load existing data into a dict.
+        file_data = json.load(file)
+        # Join new_data with file_data inside emp_details
+        file_data["results"] = []
+        # # Sets file's current position at offset.
+        file.seek(0)
+        # # convert back to json.
+        json.dump(file_data, file, indent=4)
+
+
+def write_json(new_data, filename='results.json'):
+    """"""
+    with open(filename, 'r+') as file:
+        # First we load existing data into a dict.
+        file_data = json.load(file)
+        # Join new_data with file_data inside emp_details
+        file_data["results"].append(new_data)
+        # Sets file's current position at offset.
+        file.seek(0)
+        # convert back to json.
+        json.dump(file_data, file, indent=4)
 
 
 
+#
+# y = {"emp_name": "Nikhil",
+#      "email": "nikhil@geeksforgeeks.org",
+#      "job_profile": "Full Time"
+#      }
+#
+# write_json(y)
+
+
+# ---------- Main crawler functions --------------
 
 def crawl_page(url, depth):
     """"""
@@ -118,25 +164,11 @@ def crawl_page(url, depth):
     pass
 
 
-
-
-
-
-
-
-
-def init_results_file():
-    results = []
-
-def insert_images():
-    pass
-
 def verify_url_path(url):
     """"""
     pass
 def verify_input_arg():
     pass
-
 
 
 if __name__ == "__main__":
