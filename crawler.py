@@ -1,10 +1,26 @@
 import sys
-import json
-import selenium
 from collections import deque
+
+# importing scraping libraries
+import json
+# import selenium
+from bs4 import BeautifulSoup
+import requests
+import re
+
+
+
+"""
+useful Links:
+- https://www.geeksforgeeks.org/image-scraping-with-python/
+- https://www.geeksforgeeks.org/beautifulsoup-scraping-link-from-html/
+"""
+
 
 # TODO: create a class of a web page to crawl?
 # TODO: mark them if we have visited the page
+
+# TODO: open web page and extract images
 
 
 class PageNode:
@@ -13,15 +29,58 @@ class PageNode:
         self._depth = depth
 
 
-
-
 def main():
     args = sys.argv[1:]
+    # TODO: add test for the input args
     print(args)
 
-def find_page_images(PageNode):
-    """"""
-    pass
+    find_page_images("https://www.geeksforgeeks.org/")
+
+
+def get_data(url):
+    """
+    Using the requests lib, getting the body of a given url
+    :param url: String - The url to access
+    :return: String - The response bodt
+    """
+    r = requests.get(url)
+    return r.text
+
+
+def find_page_images(url):
+    """
+    Given a url, find all images included
+    :param url:
+    :return:
+    """
+    images = []
+    html_data = get_data(url)
+    soup = BeautifulSoup(html_data, 'html.parser') # Parsing the response data, using BS
+    current_image = {}
+    current_node_urls = []
+
+    # Getting all images on the passed link
+    for item in soup.find_all('img'):
+        current_image["imageUrl"] = item['src'] # add the current img url
+        current_image["sourceUrl"] = url
+        current_image["depth"] = "0" # TODO: update based on the node passed by
+        # print(current_image)
+        images.append(current_image) # TODO: append to the json file
+
+    # Getting all urls inside the  main url
+    for link in soup.find_all('a', attrs={'href': re.compile("^https://")}):
+        # display the actual urls
+        # print(link.get('href'))
+        current_node_urls.append(link.get('href'))
+
+    return images, current_node_urls
+
+
+
+
+
+
+
 
 
 def crawl_page(url, depth):
@@ -43,7 +102,7 @@ def crawl_page(url, depth):
             my_urls_list.add(current_page._url) # add to my urls list
             print("scraping the page here")
             print("appending the new data to our results file")
-
+    pass
 
 
 
