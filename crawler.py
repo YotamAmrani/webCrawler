@@ -1,189 +1,157 @@
-# main libraries
+import requests
 import sys
-from collections import deque
-
-#  scraping libraries
+import re
 import json
 from bs4 import BeautifulSoup
-import requests
-import re
+from collections import deque
+from PageNode import PageNode
 
-# GLOBAL VARS
-# JSON_FILE_PATH = "D:/Interviews/dataloop/results.json"
-JSON_FILE_PATH = "results.json"
+
+""" GLOBAL VARS """
+RESULTS_FILE_PATH = "results.json"
+ROOT_URL_ARG_IDX = 0
+DEPTH_ARG_IDX = 1
+
 
 """
-useful Links:
-- https://www.geeksforgeeks.org/image-scraping-with-python/
-- https://www.geeksforgeeks.org/beautifulsoup-scraping-link-from-html/
-- https://www.geeksforgeeks.org/append-to-json-file-using-python/
+A web crawler CLI:
+Given a URL string and depth, the crawler will scan the web page for any images, continue to every link inside that page 
+and scan it as well. The crawling should stop once it reached the desired depth (denoted by the input param, where 
+depth=0 is the first page).
+
+The Images source paths will be saved to the 'results.json' file in the following format:
+{
+    results: [ 
+        { 
+            imageUrl: string,
+            sourceUrl: string 
+            depth: number  
+        ] 
+}
+
 """
-
-
-class PageNode:
-    """
-    The class represent a web page.
-    given a url to crawl, and it's current depth node could be created.
-    """
-    def __init__(self, source_url, depth):
-        self._url = source_url
-        self._depth = depth
-
-    def get_source_url(self):
-        return self._url
-
-    def get_node_depth(self):
-        return self._depth
 
 
 def main():
-    args = sys.argv[1:]  # TODO: add test for the input args
-
-    # Init the url and depth
-    url = args[0]
-    depth = int(args[1])
-
-    # Init  local files
-    init_results_file(JSON_FILE_PATH)  # Init the results file
-
-    # run the main crawling function:
-    crawl_page(url, depth)
-
-    # Testing section:
-
-# ---------- Parsing HTML functions --------------
+    argument_list = sys.argv[1:]
+    root_url, max_depth = argument_list[ROOT_URL_ARG_IDX], int(argument_list[DEPTH_ARG_IDX])
+    if not is_file_exists(RESULTS_FILE_PATH):
+        init_results_file(RESULTS_FILE_PATH)
+    crawl_page(root_url, max_depth)
 
 
-def get_data(url):
+def is_file_exists(file_name):
     """
-    Using the requests lib, getting the body of a given url
-    :param url: String - The url to access
-    :return: String - The response bodt
+    Test if a file already exist in the file system
+    :param file_name: the file path to test
+    :return: True if it exist, False elsewhere.
     """
-    r = requests.get(url)
-    return r.text
+    with open(file_name, 'wb+') as file:
+        test = file.read(1)
+        file.seek(0)
+        return len(test) >= 1
 
 
-def find_page_images(page_node):
+def init_results_file(file_name):
     """
-    Given a url, find all images included inside it's body and append them to the results file
-    :param page_node: A PageNode holding the current page depth and url
+    Initialize the local results file, assuming it is empty
+    :param file_name: String - The local file path
     :return: None
     """
-    html_data = get_data(page_node.get_source_url())
-    soup = BeautifulSoup(html_data, 'html.parser')  # Parsing the response data, using BS
+    with open(file_name, 'r+') as file:
+        file_data = {"results": []}
+        file.seek(0)
+        json.dump(file_data, file, indent=4)
 
-    # Getting all images on the passed link
+
+# ---------- The crawler function -------------- #
+
+def crawl_page(root_url, max_crawling_depth):
+    """
+    The Web crawler's main function - Based on the BFS traversing algorithm.
+    The crawler starts by searching for images of a given web page (declared as the root node with depth 0),
+    and moves on to its adjacent web pages (i.e. - URL links to pages within it), adding images
+    from their pages as well. The process will continue until the required depth is reached.
+
+    :param root_url: The starting page url
+    :param max_crawling_depth: The maximum depth of neighbors pages to crawl
+    :return:
+    """
+
+    current_page = PageNode(root_url, 0)
+    pages_to_crawl = deque()
+    pages_to_crawl.append(current_page)
+    visited_urls = set(current_page.get_source_url())
+
+    while current_page.get_node_depth() <= max_crawling_depth:
+        current_page = pages_to_crawl.popleft()
+        current_depth = current_page.get_node_depth()
+
+        if current_depth <= max_crawling_depth:
+            extract_images_source_paths(current_page)
+            adjacent_urls = extract_adjacent_urls(current_page)
+            for adjacent_url in adjacent_urls:
+                if adjacent_url not in visited_urls:
+                    visited_urls.add(adjacent_url)
+                    pages_to_crawl.append(PageNode(adjacent_url, current_depth + 1))
+
+
+def extract_images_source_paths(page_node):
+    """
+    Given a URL path, write all images source paths to the results file.
+    :param page_node: A PageNode instance
+    :return:
+    """
+    html_data = get_page_body(page_node)
+    soup = BeautifulSoup(html_data, 'html.parser')
+
     for item in soup.find_all('img'):
         if item.has_attr('src'):
-            current_image = {"imageUrl": item['src'], "sourceUrl": page_node.get_source_url(),
+            current_image = {"imageUrl": item['src'],
+                             "sourceUrl": page_node.get_source_url(),
                              "depth": str(page_node.get_node_depth())}
-            # print(current_image)
-            write_json(current_image, JSON_FILE_PATH)
+
+            write_to_results_file(current_image, RESULTS_FILE_PATH)
 
 
-def find_page_urls(url):
-    """"""
-    html_data = get_data(url)
-    soup = BeautifulSoup(html_data, 'html.parser')  # to be discussed, should I pass it twice?
-    current_node_urls = []
+def extract_adjacent_urls(page_node):
+    """
+    Given a URL path, find all URL paths included inside its body, and return them
+    :param page_node: the given page to extract URLs from
+    :return: returns a list of URL paths contained in the given page body element.
+    """
+    soup = BeautifulSoup(get_page_body(page_node), 'html.parser')
+    adjacent_urls = []
 
-    # Getting all urls inside the  main url
     for link in soup.find_all('a', attrs={'href': re.compile("^https://")}):
-        # display the actual urls
-        # print(link.get('href'))
-        current_node_urls.append(link.get('href'))
+        adjacent_urls.append(link.get('href'))
 
-    return current_node_urls
+    return adjacent_urls
 
 
-# ---------- Appending to JSON file functions --------------
-
-def init_results_file(filename):
+def get_page_body(page_node):
     """
-    Initializing the local results file, assuming it is empty
-    :param filename: String - The local file path
-    :return: None
+    Returns the html body of a given url
+    :param page_node: Page node holding the URL to access
+    :return: String - The HTML response body
     """
-    with open(filename, 'r+') as file:
-        file_data = {"results": []}
-        # Sets file's current position at offset.
-        file.seek(0)
-        # convert back to json.
-        json.dump(file_data, file, indent=4)
+    url = page_node.get_source_url()
+    response = requests.get(url)
+    return response.text
 
 
-def write_json(new_data, filename='results.json'):
+def write_to_results_file(new_data, file_name=RESULTS_FILE_PATH):
     """
-    Help function, appending new data to the given json file
+    Append new data to the given json file
     :param new_data: the data to append
-    :param filename: the json file path
-    :return: None
+    :param file_name: the json file path
+    :return:
     """
-    with open(filename, 'r+') as file:
-        # First we load existing data into a dict.
+    with open(file_name, 'r+') as file:
         file_data = json.load(file)
-        # Join new_data with file_data inside emp_details
         file_data["results"].append(new_data)
-        # Sets file's current position at offset.
         file.seek(0)
-        # convert back to json.
         json.dump(file_data, file, indent=4)
-
-
-# ---------- Main crawler functions --------------
-
-def crawl_page(url, depth):
-    """
-    Web crawler using BFS algorithm.
-    The crawler start by searching for images of a given web page (declared as a node with depth 0),
-    and move on to it's surrounding web pages (i.e. - links to pages within it), adding images
-    from their pages as well. The process will continue up to a given depth.
-
-
-    :param url: The starting page url
-    :param depth: The maximum depth of neighbors pages to crawl
-    :return: None
-    """
-    # init a queue for pages to crawl
-    pages_to_crawl = deque()
-
-    # init set to look for duplications
-    my_urls_list = set()
-
-    # init the
-    current_page = PageNode(url, 0)
-    pages_to_crawl.append(current_page)
-
-    # run BFS as long as we are on the matching depth
-    while current_page.get_node_depth() <= depth:
-        current_page = pages_to_crawl.popleft()  # get the current page
-        if current_page.get_source_url() not in my_urls_list and current_page.get_node_depth() <= depth:
-
-            # add to my urls list
-            my_urls_list.add(current_page.get_source_url())
-
-            # add current node images:
-            find_page_images(current_page)
-
-            # find the current page urls:
-            current_page_urls = find_page_urls(current_page.get_source_url())
-
-            # append it to my queue
-            for url in current_page_urls:
-                if url not in my_urls_list:
-                    pages_to_crawl.append(PageNode(url, current_page.get_node_depth() + 1))
-            print("Adding site to crawl: " + current_page.get_source_url() + " , depth:"
-                  + str(current_page.get_node_depth()))
-
-
-def verify_url_path():
-    """"""
-    pass
-
-
-def verify_input_arg():
-    pass
 
 
 if __name__ == "__main__":
